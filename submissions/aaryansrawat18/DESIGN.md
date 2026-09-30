@@ -565,4 +565,4 @@ LangGraph state is not a fifth table.
 
 ## What changed and why
 
-Nothing yet. This is the first design.
+The evaluation runs in LangSmith. `eval/run_eval.py` still calls the same ingest graph and the same answer graph. LangSmith stores the dataset and the experiment, and the script prints retrieval hit rate, answer correctness, correct refusal rate, false refusal rate, and average latency. A second run changes only the chunk window (`--chunk-size`). The app does not depend on LangSmith. Tracing is on only for that script.

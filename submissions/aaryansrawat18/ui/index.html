@@ -4,101 +4,381 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DocuMind</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,640&family=Outfit:wght@380;500;600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --ink: #1c1712;
+      --muted: #6f655b;
+      --paper: #f6f0e6;
+      --sheet: #fffaf3;
+      --line: #e6d9c8;
+      --forest: #14352b;
+      --forest-2: #1c4638;
+      --moss: #d7f0e2;
+      --brass: #a56b32;
+      --cream: #f3eadc;
+      --danger: #8d2f2a;
+      --danger-bg: #fdecea;
+      --shadow: 0 24px 60px rgba(28, 23, 18, 0.12);
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: Georgia, "Times New Roman", serif;
       margin: 0;
-      background: #f6f3ee;
-      color: #1f1a17;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: Outfit, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(900px 420px at 10% -10%, rgba(165, 107, 50, 0.16), transparent 60%),
+        radial-gradient(700px 380px at 100% 0%, rgba(20, 53, 43, 0.12), transparent 55%),
+        var(--paper);
     }
-    main {
-      max-width: 42rem;
-      margin: 0 auto;
-      padding: 1.5rem;
-    }
-    h1 { margin-bottom: 0.25rem; }
-    h2 { font-size: 1.15rem; margin-top: 2rem; }
-    p, label, li { line-height: 1.4; }
-    section {
-      background: #fff;
-      border: 1px solid #e4dcd2;
-      border-radius: 8px;
-      padding: 1rem;
-      margin-top: 1rem;
-    }
-    form { display: grid; gap: 0.6rem; }
-    label { display: grid; gap: 0.25rem; font-size: 0.95rem; }
-    input, textarea, button {
-      font: inherit;
-      padding: 0.45rem 0.55rem;
-    }
+    button, input, textarea { font: inherit; }
     button { cursor: pointer; }
-    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .shell {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: 100vh;
+    }
+    .sidebar {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 28%),
+        var(--forest);
+      color: var(--cream);
+      padding: 1.6rem 1.35rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      overflow: auto;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .mark {
+      width: 2.1rem;
+      height: 2.1rem;
+      border-radius: 0.7rem;
+      background:
+        linear-gradient(135deg, #f0d7b4, #c98448);
+      position: relative;
+      flex: none;
+    }
+    .mark::after {
+      content: "";
+      position: absolute;
+      inset: 0.45rem 0.38rem 0.32rem 0.55rem;
+      border-left: 2px solid #14352b;
+      border-bottom: 2px solid #14352b;
+      border-radius: 0 0 0 0.2rem;
+    }
+    .brand h1 {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 1.45rem;
+      font-weight: 640;
+      margin: 0;
+      letter-spacing: -0.03em;
+    }
+    .brand p {
+      margin: 0.1rem 0 0;
+      color: rgba(243, 234, 220, 0.72);
+      font-size: 0.82rem;
+    }
+    .account {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(243, 234, 220, 0.12);
+      border-radius: 0.9rem;
+      padding: 0.75rem 0.85rem;
+      font-size: 0.92rem;
+    }
+    .ghost {
+      background: transparent;
+      color: var(--cream);
+      border: 1px solid rgba(243, 234, 220, 0.28);
+      border-radius: 999px;
+      padding: 0.35rem 0.75rem;
+      margin-top: 0.55rem;
+    }
+    .ghost:hover { background: rgba(255, 255, 255, 0.08); }
+    .stage { padding: 1.75rem 1.75rem 2.5rem; }
+    .welcome {
+      max-width: 40rem;
+      margin: 6vh auto 0;
+    }
+    .eyebrow {
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      color: var(--brass);
+      font-weight: 600;
+      margin: 0 0 0.6rem;
+    }
+    .welcome h2, .sheet h2, .panel h2 {
+      font-family: Fraunces, Georgia, serif;
+      font-weight: 560;
+      letter-spacing: -0.03em;
+      margin: 0;
+    }
+    .welcome h2 {
+      font-size: clamp(2.4rem, 5vw, 4.1rem);
+      line-height: 0.98;
+    }
+    .lede {
+      font-size: 1.08rem;
+      line-height: 1.55;
+      color: var(--muted);
+      max-width: 34rem;
+    }
+    .points {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    .point {
+      background: var(--sheet);
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      padding: 0.9rem;
+      box-shadow: 0 10px 30px rgba(28, 23, 18, 0.04);
+    }
+    .point strong { display: block; margin-bottom: 0.25rem; }
+    .point span { color: var(--muted); font-size: 0.88rem; line-height: 1.4; }
+    .panel, .sheet, .auth-card {
+      background: var(--sheet);
+      border: 1px solid var(--line);
+      border-radius: 1.15rem;
+      box-shadow: var(--shadow);
+    }
+    .auth-card { padding: 1.1rem; margin-top: 1.5rem; }
+    .tabs { display: flex; gap: 0.4rem; margin-bottom: 0.9rem; }
+    .tabs button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+    }
+    .tabs button[aria-selected="true"] {
+      background: var(--forest);
+      color: var(--cream);
+    }
+    form { display: grid; gap: 0.7rem; }
+    label { display: grid; gap: 0.3rem; font-size: 0.92rem; }
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 0.75rem;
+      padding: 0.7rem 0.8rem;
+      color: var(--ink);
+    }
+    textarea { resize: vertical; min-height: 6.5rem; }
+    input:focus, textarea:focus {
+      outline: 2px solid rgba(20, 53, 43, 0.35);
+      border-color: var(--forest);
+    }
+    .primary, .quiet {
+      border: 0;
+      border-radius: 999px;
+      padding: 0.7rem 1rem;
+      font-weight: 600;
+    }
+    .primary { background: var(--forest); color: #f6f1e8; }
+    .primary:hover { background: var(--forest-2); }
+    .primary:disabled { opacity: 0.6; cursor: wait; }
+    .quiet {
+      background: transparent;
+      color: var(--danger);
+      padding: 0.25rem 0.45rem;
+    }
     .error {
-      background: #fff4f2;
-      border: 1px solid #e3b2aa;
-      padding: 0.75rem;
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-radius: 0.85rem;
+      padding: 0.75rem 0.9rem;
+      margin: 0 0 1rem;
       white-space: pre-wrap;
     }
-    .hidden { display: none; }
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(240px, 300px) 1fr;
+      gap: 1.1rem;
+      align-items: start;
+    }
+    .panel, .sheet { padding: 1.1rem; }
+    .panel h2, .sheet h2 { font-size: 1.45rem; }
+    .hint { color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
+    .drop {
+      display: grid;
+      gap: 0.35rem;
+      border: 1.5px dashed #c9b59a;
+      border-radius: 0.9rem;
+      padding: 0.85rem;
+      background: #fff;
+      margin: 0.8rem 0;
+    }
+    .drop.over { border-color: var(--forest); background: #f3faf6; }
+    .drop input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+    }
+    .file-name { font-size: 0.85rem; opacity: 0.8; }
+    .docs, .history { display: grid; gap: 0.55rem; margin-top: 0.8rem; }
+    .doc, .history button {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 0.55rem;
+      align-items: center;
+      text-align: left;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 0.85rem;
+      padding: 0.65rem 0.7rem;
+    }
+    .history button { width: 100%; cursor: pointer; grid-template-columns: 1fr auto; }
+    .history button:hover, .doc:hover { border-color: #c9b59a; }
+    .sidebar .doc {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(243, 234, 220, 0.16);
+      color: var(--cream);
+      grid-template-columns: 1fr auto;
+    }
+    .sidebar .doc label { grid-column: 1 / -1; }
+    .sidebar .name { color: var(--cream); }
+    .sidebar .quiet { color: #f3c7c1; }
+    .doc label { display: flex; gap: 0.45rem; align-items: flex-start; }
+    .name { font-weight: 600; word-break: break-word; }
+    .pill {
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 0.2rem 0.45rem;
+      background: #efe4d4;
+      color: #6a4b28;
+      white-space: nowrap;
+    }
+    .pill.ready { background: var(--moss); color: #14533a; }
+    .pill.processing { background: #e4eefc; color: #1d4e89; }
+    .pill.failed { background: var(--danger-bg); color: var(--danger); }
+    .empty {
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 0.85rem;
+      padding: 0.8rem;
+      background: rgba(255, 255, 255, 0.55);
+    }
+    .answer-kicker { margin: 1rem 0 0.2rem; color: var(--brass); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; }
+    .answer-text {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 1.45rem;
+      line-height: 1.35;
+      margin: 0.2rem 0 0.6rem;
+    }
+    .refused .answer-text { color: #6a4b28; }
+    .usage { color: var(--muted); font-size: 0.85rem; margin: 0; }
     .citation {
-      border-top: 1px solid #e4dcd2;
       margin-top: 0.75rem;
-      padding-top: 0.75rem;
+      padding: 0.8rem 0.9rem;
+      border-radius: 0.85rem;
+      background: #fff;
+      border-left: 3px solid var(--brass);
+    }
+    .citation strong { display: block; margin-bottom: 0.3rem; }
+    .citation p { margin: 0; color: #3d342c; line-height: 1.45; }
+    .hidden { display: none !important; }
+    @media (max-width: 980px) {
+      .shell, .workspace, .points { grid-template-columns: 1fr; }
+      .welcome { margin-top: 1rem; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <h1>DocuMind</h1>
-    <p>Upload your documents, then ask a question. Answers cite the page they came from.</p>
-    <p id="errorBox" class="error hidden" role="alert"></p>
-    <p id="accountStatus">You are not logged in.</p>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true"></div>
+        <div>
+          <h1>DocuMind</h1>
+          <p>Answers from your pages, with the page named.</p>
+        </div>
+      </div>
+      <div class="account">
+        <div id="accountStatus">You are not logged in.</div>
+        <button id="logoutButton" class="ghost hidden" type="button">Log out</button>
+      </div>
+      <section id="library" class="hidden">
+        <h2 style="font-family: Fraunces, Georgia, serif; font-weight: 560; margin: 0;">Library</h2>
+        <p class="hint" style="color: rgba(243,234,220,0.75);">Check the files a question may use. Leave them all clear to search every ready document.</p>
+        <form id="uploadForm">
+          <label class="drop" id="dropZone" style="color: var(--cream); border-color: rgba(243,234,220,0.35); background: rgba(255,255,255,0.04); position: relative;">
+            <strong>Choose a PDF or text file</strong>
+            <span class="file-name" id="fileName">Nothing selected yet</span>
+            <input id="documentFile" type="file" accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown">
+          </label>
+          <button class="primary" type="submit" style="background: #f3eadc; color: #14352b;">Upload</button>
+        </form>
+        <p id="documentStatus" class="hint" style="color: rgba(243,234,220,0.8);"></p>
+        <div id="documentList"></div>
+      </section>
+    </aside>
 
-    <section>
-      <h2>Create an account</h2>
-      <form id="signupForm">
-        <label>Username <input id="signupUsername" name="username" required></label>
-        <label>Email <input id="signupEmail" name="email" type="email" required></label>
-        <label>Password <input id="signupPassword" name="password" type="password" minlength="8" required></label>
-        <button type="submit">Sign up</button>
-      </form>
-    </section>
+    <main class="stage">
+      <p id="errorBox" class="error hidden" role="alert"></p>
 
-    <section>
-      <h2>Log in</h2>
-      <form id="loginForm">
-        <label>Username or email <input id="loginUsername" name="username" required></label>
-        <label>Password <input id="loginPassword" name="password" type="password" required></label>
-        <button type="submit">Log in</button>
-      </form>
-      <p><button id="logoutButton" type="button">Log out</button></p>
-    </section>
+      <section id="welcome">
+        <p class="eyebrow">Knowledge assistant</p>
+        <h2>Ask the documents you already trust.</h2>
+        <p class="lede">Upload a policy, a manual, or a guide. DocuMind answers from those pages and shows the passage. If the pages do not contain it, it says so.</p>
+        <div class="points">
+          <div class="point"><strong>Grounded</strong><span>The answer is taken from retrieved passages, not from a guess.</span></div>
+          <div class="point"><strong>Cited</strong><span>Each citation names the file and the page the words came from.</span></div>
+          <div class="point"><strong>Honest</strong><span>A missing fact comes back as “not found,” with nothing cited.</span></div>
+        </div>
+        <div class="auth-card">
+          <div class="tabs" role="tablist">
+            <button type="button" id="showSignup" role="tab" aria-selected="true">Create account</button>
+            <button type="button" id="showLogin" role="tab" aria-selected="false">Log in</button>
+          </div>
+          <form id="signupForm">
+            <label>Username <input id="signupUsername" name="username" autocomplete="username" required></label>
+            <label>Email <input id="signupEmail" name="email" type="email" autocomplete="email" required></label>
+            <label>Password <input id="signupPassword" name="password" type="password" minlength="8" autocomplete="new-password" required></label>
+            <button class="primary" type="submit">Sign up</button>
+          </form>
+          <form id="loginForm" class="hidden">
+            <label>Username or email <input id="loginUsername" name="username" autocomplete="username" required></label>
+            <label>Password <input id="loginPassword" name="password" type="password" autocomplete="current-password" required></label>
+            <button class="primary" type="submit">Log in</button>
+          </form>
+        </div>
+      </section>
 
-    <section>
-      <h2>Upload a document</h2>
-      <p>PDF or UTF-8 text. The status starts at queued, then becomes ready or failed.</p>
-      <form id="uploadForm">
-        <label>File <input id="documentFile" type="file" required></label>
-        <button type="submit">Upload</button>
-      </form>
-      <p id="documentStatus"></p>
-      <div id="documentList"></div>
-    </section>
-
-    <section>
-      <h2>Ask a question</h2>
-      <p>Leave every box unchecked to search all ready documents.</p>
-      <form id="questionForm">
-        <label>Question <textarea id="questionText" rows="3" required></textarea></label>
-        <button type="submit">Ask</button>
-      </form>
-      <div id="answerBox"></div>
-    </section>
-  </main>
+      <section id="studio" class="workspace hidden">
+        <div class="panel">
+          <h2>Recent questions</h2>
+          <p class="hint">A click puts that question back in the box.</p>
+          <div id="historyList" class="history"></div>
+        </div>
+        <div class="sheet">
+          <p class="eyebrow">Question</p>
+          <h2>What do you need from the pages?</h2>
+          <form id="questionForm">
+            <label>Question <textarea id="questionText" rows="4" required placeholder="For example: How many days of paid leave are there?"></textarea></label>
+            <button class="primary" id="askButton" type="submit">Ask</button>
+          </form>
+          <div id="answerBox"></div>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <script>
-    // The token stays in this browser tab. It is not written to the page text.
     var TOKEN_KEY = "documindToken";
     var USERNAME_KEY = "documindUsername";
 
@@ -107,6 +387,12 @@
     var documentStatus = document.getElementById("documentStatus");
     var documentList = document.getElementById("documentList");
     var answerBox = document.getElementById("answerBox");
+    var historyList = document.getElementById("historyList");
+    var logoutButton = document.getElementById("logoutButton");
+    var welcome = document.getElementById("welcome");
+    var studio = document.getElementById("studio");
+    var library = document.getElementById("library");
+    var askButton = document.getElementById("askButton");
 
     function showError(message) {
       errorBox.textContent = message;
@@ -124,14 +410,33 @@
 
     function showAccountStatus() {
       var username = sessionStorage.getItem(USERNAME_KEY);
-      if (savedToken() && username) {
+      var signedIn = Boolean(savedToken() && username);
+      welcome.classList.toggle("hidden", signedIn);
+      studio.classList.toggle("hidden", !signedIn);
+      library.classList.toggle("hidden", !signedIn);
+      logoutButton.classList.toggle("hidden", !signedIn);
+      if (signedIn) {
         accountStatus.textContent = "Logged in as " + username + ".";
       } else {
         accountStatus.textContent = "You are not logged in.";
       }
     }
 
-    // FastAPI puts a string explanation in `detail` for 401, 404, 413, 429, and 503.
+    function showAuthTab(which) {
+      var signup = which === "signup";
+      document.getElementById("signupForm").classList.toggle("hidden", !signup);
+      document.getElementById("loginForm").classList.toggle("hidden", signup);
+      document.getElementById("showSignup").setAttribute("aria-selected", signup ? "true" : "false");
+      document.getElementById("showLogin").setAttribute("aria-selected", signup ? "false" : "true");
+    }
+
+    document.getElementById("showSignup").addEventListener("click", function () {
+      showAuthTab("signup");
+    });
+    document.getElementById("showLogin").addEventListener("click", function () {
+      showAuthTab("login");
+    });
+
     function plainError(status, body) {
       var detail = body && body.detail ? body.detail : "Request failed.";
       if (typeof detail !== "string") {
@@ -185,6 +490,7 @@
       sessionStorage.setItem(USERNAME_KEY, username);
       showAccountStatus();
       await loadDocuments();
+      await loadHistory();
     }
 
     document.getElementById("signupForm").addEventListener("submit", async function (event) {
@@ -216,34 +522,72 @@
       }
     });
 
-    document.getElementById("logoutButton").addEventListener("click", function () {
+    logoutButton.addEventListener("click", function () {
       sessionStorage.removeItem(TOKEN_KEY);
       sessionStorage.removeItem(USERNAME_KEY);
       documentList.textContent = "";
       answerBox.textContent = "";
+      historyList.textContent = "";
       documentStatus.textContent = "";
       showAccountStatus();
       clearError();
     });
 
+    function selectedDocumentIds() {
+      var checked = documentList.querySelectorAll("input[type=checkbox]:checked");
+      return Array.prototype.map.call(checked, function (box) {
+        return box.value;
+      });
+    }
+
     function renderDocumentList(documents) {
+      var previouslyChecked = {};
+      selectedDocumentIds().forEach(function (id) {
+        previouslyChecked[id] = true;
+      });
       documentList.textContent = "";
       if (!documents.length) {
-        documentList.textContent = "No documents yet.";
+        var empty = document.createElement("p");
+        empty.className = "empty";
+        empty.style.color = "rgba(243,234,220,0.75)";
+        empty.textContent = "No documents yet. Upload a PDF or a text file.";
+        documentList.appendChild(empty);
         return;
       }
       documents.forEach(function (documentRow) {
+        var card = document.createElement("article");
+        card.className = "doc";
         var label = document.createElement("label");
         var checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.value = documentRow.id;
         checkbox.disabled = documentRow.status !== "ready";
+        checkbox.checked = Boolean(previouslyChecked[documentRow.id]);
+        var name = document.createElement("span");
+        name.className = "name";
+        name.textContent = documentRow.filename;
         label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(
-          " " + documentRow.filename + " (" + documentRow.status + ")"
-        ));
-        documentList.appendChild(label);
-        documentList.appendChild(document.createElement("br"));
+        label.appendChild(name);
+        var pill = document.createElement("span");
+        pill.className = "pill " + documentRow.status;
+        pill.textContent = documentRow.status;
+        var remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "quiet";
+        remove.textContent = "Delete";
+        remove.addEventListener("click", async function () {
+          clearError();
+          try {
+            await apiRequest("DELETE", "/documents/" + documentRow.id);
+            await loadDocuments();
+          } catch (error) {
+            showError(error.message);
+          }
+        });
+        card.appendChild(label);
+        card.appendChild(pill);
+        card.appendChild(remove);
+        documentList.appendChild(card);
       });
     }
 
@@ -264,12 +608,32 @@
       while (true) {
         var documentRow = await apiRequest("GET", "/documents/" + documentId);
         showDocumentStatus(documentRow);
+        await loadDocuments();
         if (documentRow.status === "ready" || documentRow.status === "failed") {
           return documentRow;
         }
         await wait(2000);
       }
     }
+
+    document.getElementById("documentFile").addEventListener("change", function (event) {
+      var file = event.target.files[0];
+      document.getElementById("fileName").textContent = file ? file.name : "Nothing selected yet";
+    });
+
+    var dropZone = document.getElementById("dropZone");
+    ["dragenter", "dragover"].forEach(function (name) {
+      dropZone.addEventListener(name, function (event) {
+        event.preventDefault();
+        dropZone.classList.add("over");
+      });
+    });
+    ["dragleave", "drop"].forEach(function (name) {
+      dropZone.addEventListener(name, function (event) {
+        event.preventDefault();
+        dropZone.classList.remove("over");
+      });
+    });
 
     document.getElementById("uploadForm").addEventListener("submit", async function (event) {
       event.preventDefault();
@@ -284,28 +648,68 @@
       try {
         var queued = await apiRequest("POST", "/documents", { body: formData });
         documentStatus.textContent = "Uploaded. Status is " + queued.status + ".";
+        fileInput.value = "";
+        document.getElementById("fileName").textContent = "Nothing selected yet";
         await pollDocumentUntilFinished(queued.id);
-        await loadDocuments();
       } catch (error) {
         showError(error.message);
       }
     });
 
-    function selectedDocumentIds() {
-      var checked = documentList.querySelectorAll("input[type=checkbox]:checked");
-      return Array.prototype.map.call(checked, function (box) {
-        return box.value;
+    function renderHistory(rows) {
+      historyList.textContent = "";
+      if (!rows.length) {
+        var empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No questions yet.";
+        historyList.appendChild(empty);
+        return;
+      }
+      rows.slice(0, 8).forEach(function (row) {
+        var button = document.createElement("button");
+        button.type = "button";
+        var name = document.createElement("span");
+        name.className = "name";
+        name.textContent = row.question;
+        var pill = document.createElement("span");
+        pill.className = "pill" + (row.refused ? "" : " ready");
+        pill.textContent = row.refused ? "not found" : "answered";
+        button.appendChild(name);
+        button.appendChild(pill);
+        button.addEventListener("click", function () {
+          document.getElementById("questionText").value = row.question;
+          showAnswer(row);
+        });
+        historyList.appendChild(button);
       });
+    }
+
+    async function loadHistory() {
+      var rows = await apiRequest("GET", "/questions");
+      renderHistory(rows);
     }
 
     function showAnswer(result) {
       answerBox.textContent = "";
-      var heading = document.createElement("h3");
-      heading.textContent = result.refused ? "Not found in your documents" : "Answer";
-      answerBox.appendChild(heading);
+      answerBox.className = result.refused ? "refused" : "";
+      var kicker = document.createElement("p");
+      kicker.className = "answer-kicker";
+      kicker.textContent = result.refused ? "Not found in your documents" : "Answer";
       var answer = document.createElement("p");
+      answer.className = "answer-text";
       answer.textContent = result.answer;
+      answerBox.appendChild(kicker);
       answerBox.appendChild(answer);
+      if (result.usage) {
+        var usage = document.createElement("p");
+        usage.className = "usage";
+        var seconds = (Number(result.usage.latency_ms) || 0) / 1000;
+        usage.textContent =
+          result.usage.tokens + " tokens · " +
+          seconds.toFixed(1) + "s · $" +
+          Number(result.usage.estimated_cost_usd || 0).toFixed(6);
+        answerBox.appendChild(usage);
+      }
       (result.citations || []).forEach(function (citation) {
         var block = document.createElement("div");
         block.className = "citation";
@@ -324,20 +728,29 @@
       clearError();
       var question = document.getElementById("questionText").value.trim();
       var payload = { question: question, document_ids: selectedDocumentIds() };
+      askButton.disabled = true;
+      askButton.textContent = "Reading the pages…";
       try {
         var result = await apiRequest("POST", "/questions", {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
         showAnswer(result);
+        await loadHistory();
       } catch (error) {
         showError(error.message);
+      } finally {
+        askButton.disabled = false;
+        askButton.textContent = "Ask";
       }
     });
 
     showAccountStatus();
     if (savedToken()) {
       loadDocuments().catch(function (error) {
+        showError(error.message);
+      });
+      loadHistory().catch(function (error) {
         showError(error.message);
       });
     }
