@@ -1,0 +1,8 @@
+.env
+__pycache__/
+.venv/
+.pytest_cache/
+uploads/
+*.pyc
+.cache/
+huggingface/
