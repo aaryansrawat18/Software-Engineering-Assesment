@@ -8,10 +8,19 @@ class Settings(BaseSettings):
     database_url: str
     jwt_secret: str
     redis_url: str = ""
+    # Shared folder for the API and the worker. Each file is named with its document id.
+    upload_dir: str = "uploads"
     gemini_api_key: str = ""
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     gemini_model: str = "gemini-2.5-flash"
     similarity_threshold: float = 0.35
+
+    @field_validator("upload_dir", mode="before")
+    @classmethod
+    def default_upload_dir(cls, value: object) -> object:
+        if value is None or (isinstance(value, str) and not value.strip()):
+            return "uploads"
+        return value
 
     @field_validator("database_url", "jwt_secret")
     @classmethod

@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from app.auth import current_user
+from app.config import get_settings
 from app.db import engine, init_db
 from app.main import app
 from app.models import User
@@ -41,6 +42,13 @@ def clean_tables(database):
 
 
 @pytest.fixture
-def client():
+def upload_dir(tmp_path, monkeypatch):
+    """Store uploaded files in a temporary folder so tests do not touch real uploads."""
+    monkeypatch.setattr(get_settings(), "upload_dir", str(tmp_path))
+    return tmp_path
+
+
+@pytest.fixture
+def client(upload_dir):
     with TestClient(app) as test_client:
         yield test_client
