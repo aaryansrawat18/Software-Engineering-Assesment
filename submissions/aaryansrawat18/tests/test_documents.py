@@ -29,7 +29,7 @@ def auth_header(token: str) -> dict[str, str]:
 def test_upload_returns_202_and_does_not_embed(client, upload_dir, monkeypatch):
     queued_ids = []
 
-    def capture_queue(document_id: str) -> None:
+    def capture_queue(document_id: str, request_id: str | None = None) -> None:
         queued_ids.append(document_id)
 
     def embed_must_not_run(*_args, **_kwargs):
@@ -70,7 +70,7 @@ def test_upload_returns_202_and_does_not_embed(client, upload_dir, monkeypatch):
 
 
 def test_upload_accepts_pdf_magic_and_markdown(client, monkeypatch):
-    monkeypatch.setattr("app.routers.documents.enqueue_ingest", lambda document_id: None)
+    monkeypatch.setattr("app.routers.documents.enqueue_ingest", lambda document_id, request_id=None: None)
     token = signup_and_token(client, "ada")
 
     pdf = client.post(
@@ -97,7 +97,7 @@ def test_upload_accepts_pdf_magic_and_markdown(client, monkeypatch):
 
 
 def test_upload_rejects_oversize_and_binary(client, monkeypatch):
-    monkeypatch.setattr("app.routers.documents.enqueue_ingest", lambda document_id: None)
+    monkeypatch.setattr("app.routers.documents.enqueue_ingest", lambda document_id, request_id=None: None)
     token = signup_and_token(client, "ada")
 
     too_big = client.post(
@@ -124,7 +124,7 @@ def test_upload_rejects_oversize_and_binary(client, monkeypatch):
 
 
 def test_list_is_only_the_callers_documents(client, monkeypatch):
-    monkeypatch.setattr("app.routers.documents.enqueue_ingest", lambda document_id: None)
+    monkeypatch.setattr("app.routers.documents.enqueue_ingest", lambda document_id, request_id=None: None)
     ada_token = signup_and_token(client, "ada")
     grace_token = signup_and_token(client, "grace")
     uploaded = client.post(
@@ -144,7 +144,7 @@ def test_list_is_only_the_callers_documents(client, monkeypatch):
 
 
 def test_other_user_get_and_delete_are_404(client, upload_dir, monkeypatch):
-    monkeypatch.setattr("app.routers.documents.enqueue_ingest", lambda document_id: None)
+    monkeypatch.setattr("app.routers.documents.enqueue_ingest", lambda document_id, request_id=None: None)
     ada_token = signup_and_token(client, "ada")
     grace_token = signup_and_token(client, "grace")
     uploaded = client.post(
@@ -169,7 +169,7 @@ def test_other_user_get_and_delete_are_404(client, upload_dir, monkeypatch):
 
 
 def test_delete_removes_file_and_chunks(client, upload_dir, monkeypatch):
-    monkeypatch.setattr("app.routers.documents.enqueue_ingest", lambda document_id: None)
+    monkeypatch.setattr("app.routers.documents.enqueue_ingest", lambda document_id, request_id=None: None)
     token = signup_and_token(client, "ada")
     uploaded = client.post(
         "/documents",

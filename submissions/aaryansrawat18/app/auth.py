@@ -36,6 +36,19 @@ def create_token(user_id: uuid.UUID) -> str:
     return jwt.encode(payload, get_settings().jwt_secret, algorithm=_ALGORITHM)
 
 
+def read_user_id_from_token(token: str) -> str | None:
+    """Return the user id inside a token, or None when the token is bad.
+
+    Logs use this. The route still rejects a bad token with 401.
+    The token string is not returned.
+    """
+    try:
+        payload = jwt.decode(token, get_settings().jwt_secret, algorithms=[_ALGORITHM])
+        return str(uuid.UUID(payload["sub"]))
+    except (jwt.PyJWTError, KeyError, ValueError):
+        return None
+
+
 def current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     session: Session = Depends(get_session),

@@ -41,6 +41,47 @@ def clean_tables(database):
     _truncate()
 
 
+class MemoryRedis:
+    """The Redis commands this app uses, stored in a dict so tests need no server.
+
+    `incr`, `expire`, `ping`, `set`, and `exists` match the real client closely
+    enough for the rate limit, the heartbeat, and the health check.
+    """
+
+    def __init__(self) -> None:
+        self.values: dict[str, object] = {}
+        self.ttls: dict[str, int] = {}
+
+    def incr(self, key: str) -> int:
+        count = int(self.values.get(key, 0)) + 1
+        self.values[key] = count
+        return count
+
+    def expire(self, key: str, seconds: int) -> bool:
+        self.ttls[key] = seconds
+        return True
+
+    def ping(self) -> bool:
+        return True
+
+    def set(self, key: str, value: object, ex: int | None = None) -> bool:
+        self.values[key] = value
+        if ex is not None:
+            self.ttls[key] = ex
+        return True
+
+    def exists(self, key: str) -> int:
+        return 1 if key in self.values else 0
+
+
+@pytest.fixture(autouse=True)
+def memory_redis(monkeypatch):
+    """Point every Redis call at one in-memory client for this test."""
+    fake_redis = MemoryRedis()
+    monkeypatch.setattr("app.services.redis_client.get_redis", lambda: fake_redis)
+    return fake_redis
+
+
 @pytest.fixture
 def upload_dir(tmp_path, monkeypatch):
     """Store uploaded files in a temporary folder so tests do not touch real uploads."""

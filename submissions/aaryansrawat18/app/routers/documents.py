@@ -147,7 +147,8 @@ async def upload_document(
 
     try:
         # Queue the id string only. The worker opens the file we just wrote.
-        enqueue_ingest(str(document_id))
+        # Pass the request id so the worker log matches this HTTP request.
+        enqueue_ingest(str(document_id), request_id=getattr(request.state, "request_id", None))
     except Exception:
         session.delete(document)
         session.commit()

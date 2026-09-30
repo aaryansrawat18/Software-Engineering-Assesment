@@ -1,34 +1,51 @@
 """Background worker that turns an uploaded file into chunks.
 
 The API enqueues the document id only. This process loads that row, marks it
-processing, and runs the ingest graph.
+processing, and runs the ingest graph. While it runs, it writes a heartbeat
+key so `/health` can see that a worker is alive.
 
 Start it with the same REDIS_URL as the API:
 
     python -m app.worker
 
-The rq command works too, if you pass this class so the startup sweep runs:
+The rq command works too, if you pass this class so the sweep and heartbeat run:
 
-    rq worker --worker-class app.worker.IngestWorker
+    rq worker --url $REDIS_URL --worker-class app.worker.IngestWorker
 """
 
 import logging
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from redis import Redis
-from rq import Worker
+from rq import Worker, get_current_job
 from sqlalchemy import select
 
-from app.config import get_settings
 from app.db import SessionLocal
 from app.models import Document
+from app.services import redis_client
+from app.services.heartbeat import SWEEP_TIMEOUT_MINUTES, write_heartbeat_until_stopped
 from app.services.queue import enqueue_ingest
 
 logger = logging.getLogger(__name__)
 
 # A document left in `processing` longer than this is put back on the queue.
-STUCK_PROCESSING_MINUTES = 10
+STUCK_PROCESSING_MINUTES = SWEEP_TIMEOUT_MINUTES
+
+
+def _log_fields(document_id: str) -> dict[str, str]:
+    """Fields for one worker log line. Always the document id.
+
+    The request id is included only when the API stored it on the RQ job.
+    """
+    fields = {"document_id": document_id}
+    job = get_current_job()
+    if job is None:
+        return fields
+    request_id = job.meta.get("request_id")
+    if request_id:
+        fields["request_id"] = str(request_id)
+    return fields
 
 
 def ingest(document_id: str) -> None:
@@ -47,7 +64,7 @@ def ingest(document_id: str) -> None:
         document.processing_started_at = datetime.now(timezone.utc)
         session.commit()
 
-    logger.info("ingest started", extra={"document_id": document_id})
+    logger.info("ingest started", extra=_log_fields(document_id))
     # Imported here so the API process does not load the graph just to enqueue.
     from app.graphs.ingest import graph
 
@@ -79,18 +96,39 @@ def requeue_stuck_documents() -> None:
         enqueue_ingest(document_id)
 
 
+def _start_heartbeat() -> threading.Event:
+    """Start the heartbeat thread and return the event that stops it."""
+    stop_event = threading.Event()
+    heartbeat_thread = threading.Thread(
+        target=write_heartbeat_until_stopped,
+        args=(stop_event,),
+        name="worker-heartbeat",
+        daemon=True,
+    )
+    heartbeat_thread.start()
+    return stop_event
+
+
 class IngestWorker(Worker):
-    """RQ worker that requeues stuck documents once, when the process starts."""
+    """RQ worker that requeues stuck documents once, then writes a heartbeat."""
 
     def work(self, *args, **kwargs):
+        # Same JSON logs as the API. Imported here so tests that only call
+        # `ingest` do not reset the logging setup.
+        from app.logging import configure_logging
+
+        configure_logging()
         requeue_stuck_documents()
-        return super().work(*args, **kwargs)
+        stop_heartbeat = _start_heartbeat()
+        try:
+            return super().work(*args, **kwargs)
+        finally:
+            stop_heartbeat.set()
 
 
 def main() -> None:
     """Run the startup sweep, then listen on the default Redis queue."""
-    redis_connection = Redis.from_url(get_settings().redis_url)
-    worker = IngestWorker(["default"], connection=redis_connection)
+    worker = IngestWorker(["default"], connection=redis_client.get_redis())
     worker.work()
 
 

@@ -1,7 +1,8 @@
 """Ask a question and read this user's question history.
 
-`POST /questions` checks the token and ownership, then runs the answer graph
-once. The router does not call Gemini. `GET /questions` only reads rows.
+`POST /questions` checks the token, the per-user rate limit, and ownership,
+then runs the answer graph once. The router does not call Gemini.
+`GET /questions` only reads rows and is not rate limited.
 """
 
 import time
@@ -17,10 +18,13 @@ from app.auth import current_user, get_owned_document
 from app.db import get_session
 from app.graphs.answer import AnswerFailed, graph as answer_graph
 from app.models import Document, Question, User
+from app.services.rate_limit import RateLimitUnavailable, question_is_allowed
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
 ANSWER_UNAVAILABLE = "The answer service is unavailable. Try again."
+TOO_MANY_QUESTIONS = "Too many questions. You can ask 10 per minute."
+RATE_LIMIT_UNAVAILABLE = "Question rate limit is unavailable. Try again."
 
 
 class AskQuestionRequest(BaseModel):
@@ -130,7 +134,17 @@ def ask_question(
     user: User = Depends(current_user),
     session: Session = Depends(get_session),
 ) -> AskQuestionResponse:
-    """Run the answer graph and return the saved answer or a not-found refusal."""
+    """Run the answer graph and return the saved answer or a not-found refusal.
+
+    The rate limit runs first. A user over the cap does not start the graph.
+    """
+    try:
+        allowed = question_is_allowed(user.id)
+    except RateLimitUnavailable:
+        raise HTTPException(status_code=503, detail=RATE_LIMIT_UNAVAILABLE) from None
+    if not allowed:
+        raise HTTPException(status_code=429, detail=TOO_MANY_QUESTIONS)
+
     document_ids = _documents_in_scope(session, user.id, body.document_ids)
     started_at = time.perf_counter()
     try:

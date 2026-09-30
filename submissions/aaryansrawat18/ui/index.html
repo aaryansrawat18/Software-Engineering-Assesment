@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DocuMind</title>
+  <style>
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      margin: 0;
+      background: #f6f3ee;
+      color: #1f1a17;
+    }
+    main {
+      max-width: 42rem;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+    h1 { margin-bottom: 0.25rem; }
+    h2 { font-size: 1.15rem; margin-top: 2rem; }
+    p, label, li { line-height: 1.4; }
+    section {
+      background: #fff;
+      border: 1px solid #e4dcd2;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    form { display: grid; gap: 0.6rem; }
+    label { display: grid; gap: 0.25rem; font-size: 0.95rem; }
+    input, textarea, button {
+      font: inherit;
+      padding: 0.45rem 0.55rem;
+    }
+    button { cursor: pointer; }
+    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .error {
+      background: #fff4f2;
+      border: 1px solid #e3b2aa;
+      padding: 0.75rem;
+      white-space: pre-wrap;
+    }
+    .hidden { display: none; }
+    .citation {
+      border-top: 1px solid #e4dcd2;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>DocuMind</h1>
+    <p>Upload your documents, then ask a question. Answers cite the page they came from.</p>
+    <p id="errorBox" class="error hidden" role="alert"></p>
+    <p id="accountStatus">You are not logged in.</p>
+
+    <section>
+      <h2>Create an account</h2>
+      <form id="signupForm">
+        <label>Username <input id="signupUsername" name="username" required></label>
+        <label>Email <input id="signupEmail" name="email" type="email" required></label>
+        <label>Password <input id="signupPassword" name="password" type="password" minlength="8" required></label>
+        <button type="submit">Sign up</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>Log in</h2>
+      <form id="loginForm">
+        <label>Username or email <input id="loginUsername" name="username" required></label>
+        <label>Password <input id="loginPassword" name="password" type="password" required></label>
+        <button type="submit">Log in</button>
+      </form>
+      <p><button id="logoutButton" type="button">Log out</button></p>
+    </section>
+
+    <section>
+      <h2>Upload a document</h2>
+      <p>PDF or UTF-8 text. The status starts at queued, then becomes ready or failed.</p>
+      <form id="uploadForm">
+        <label>File <input id="documentFile" type="file" required></label>
+        <button type="submit">Upload</button>
+      </form>
+      <p id="documentStatus"></p>
+      <div id="documentList"></div>
+    </section>
+
+    <section>
+      <h2>Ask a question</h2>
+      <p>Leave every box unchecked to search all ready documents.</p>
+      <form id="questionForm">
+        <label>Question <textarea id="questionText" rows="3" required></textarea></label>
+        <button type="submit">Ask</button>
+      </form>
+      <div id="answerBox"></div>
+    </section>
+  </main>
+
+  <script>
+    // The token stays in this browser tab. It is not written to the page text.
+    var TOKEN_KEY = "documindToken";
+    var USERNAME_KEY = "documindUsername";
+
+    var errorBox = document.getElementById("errorBox");
+    var accountStatus = document.getElementById("accountStatus");
+    var documentStatus = document.getElementById("documentStatus");
+    var documentList = document.getElementById("documentList");
+    var answerBox = document.getElementById("answerBox");
+
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.classList.remove("hidden");
+    }
+
+    function clearError() {
+      errorBox.textContent = "";
+      errorBox.classList.add("hidden");
+    }
+
+    function savedToken() {
+      return sessionStorage.getItem(TOKEN_KEY);
+    }
+
+    function showAccountStatus() {
+      var username = sessionStorage.getItem(USERNAME_KEY);
+      if (savedToken() && username) {
+        accountStatus.textContent = "Logged in as " + username + ".";
+      } else {
+        accountStatus.textContent = "You are not logged in.";
+      }
+    }
+
+    // FastAPI puts a string explanation in `detail` for 401, 404, 413, 429, and 503.
+    function plainError(status, body) {
+      var detail = body && body.detail ? body.detail : "Request failed.";
+      if (typeof detail !== "string") {
+        detail = JSON.stringify(detail);
+      }
+      return status + ": " + detail;
+    }
+
+    async function readBody(response) {
+      var text = await response.text();
+      if (!text) {
+        return null;
+      }
+      try {
+        return JSON.parse(text);
+      } catch (error) {
+        return { detail: text };
+      }
+    }
+
+    async function apiRequest(method, path, options) {
+      var headers = Object.assign({}, (options && options.headers) || {});
+      var token = savedToken();
+      if (token) {
+        headers.Authorization = "Bearer " + token;
+      }
+      var response = await fetch(path, {
+        method: method,
+        headers: headers,
+        body: options && options.body
+      });
+      var body = await readBody(response);
+      if (!response.ok) {
+        throw new Error(plainError(response.status, body));
+      }
+      return body;
+    }
+
+    function wait(milliseconds) {
+      return new Promise(function (resolve) {
+        setTimeout(resolve, milliseconds);
+      });
+    }
+
+    async function loginWithPassword(username, password) {
+      var body = await apiRequest("POST", "/auth/login", {
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username, password: password })
+      });
+      sessionStorage.setItem(TOKEN_KEY, body.access_token);
+      sessionStorage.setItem(USERNAME_KEY, username);
+      showAccountStatus();
+      await loadDocuments();
+    }
+
+    document.getElementById("signupForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      clearError();
+      var username = document.getElementById("signupUsername").value.trim();
+      var email = document.getElementById("signupEmail").value.trim();
+      var password = document.getElementById("signupPassword").value;
+      try {
+        await apiRequest("POST", "/auth/signup", {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: username, email: email, password: password })
+        });
+        await loginWithPassword(username, password);
+      } catch (error) {
+        showError(error.message);
+      }
+    });
+
+    document.getElementById("loginForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      clearError();
+      var username = document.getElementById("loginUsername").value.trim();
+      var password = document.getElementById("loginPassword").value;
+      try {
+        await loginWithPassword(username, password);
+      } catch (error) {
+        showError(error.message);
+      }
+    });
+
+    document.getElementById("logoutButton").addEventListener("click", function () {
+      sessionStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(USERNAME_KEY);
+      documentList.textContent = "";
+      answerBox.textContent = "";
+      documentStatus.textContent = "";
+      showAccountStatus();
+      clearError();
+    });
+
+    function renderDocumentList(documents) {
+      documentList.textContent = "";
+      if (!documents.length) {
+        documentList.textContent = "No documents yet.";
+        return;
+      }
+      documents.forEach(function (documentRow) {
+        var label = document.createElement("label");
+        var checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = documentRow.id;
+        checkbox.disabled = documentRow.status !== "ready";
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(
+          " " + documentRow.filename + " (" + documentRow.status + ")"
+        ));
+        documentList.appendChild(label);
+        documentList.appendChild(document.createElement("br"));
+      });
+    }
+
+    async function loadDocuments() {
+      var documents = await apiRequest("GET", "/documents");
+      renderDocumentList(documents);
+    }
+
+    function showDocumentStatus(documentRow) {
+      var line = documentRow.filename + " is " + documentRow.status + ".";
+      if (documentRow.status === "failed" && documentRow.error) {
+        line += " Reason: " + documentRow.error + ".";
+      }
+      documentStatus.textContent = line;
+    }
+
+    async function pollDocumentUntilFinished(documentId) {
+      while (true) {
+        var documentRow = await apiRequest("GET", "/documents/" + documentId);
+        showDocumentStatus(documentRow);
+        if (documentRow.status === "ready" || documentRow.status === "failed") {
+          return documentRow;
+        }
+        await wait(2000);
+      }
+    }
+
+    document.getElementById("uploadForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      clearError();
+      var fileInput = document.getElementById("documentFile");
+      if (!fileInput.files.length) {
+        showError("Choose a file first.");
+        return;
+      }
+      var formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+      try {
+        var queued = await apiRequest("POST", "/documents", { body: formData });
+        documentStatus.textContent = "Uploaded. Status is " + queued.status + ".";
+        await pollDocumentUntilFinished(queued.id);
+        await loadDocuments();
+      } catch (error) {
+        showError(error.message);
+      }
+    });
+
+    function selectedDocumentIds() {
+      var checked = documentList.querySelectorAll("input[type=checkbox]:checked");
+      return Array.prototype.map.call(checked, function (box) {
+        return box.value;
+      });
+    }
+
+    function showAnswer(result) {
+      answerBox.textContent = "";
+      var heading = document.createElement("h3");
+      heading.textContent = result.refused ? "Not found in your documents" : "Answer";
+      answerBox.appendChild(heading);
+      var answer = document.createElement("p");
+      answer.textContent = result.answer;
+      answerBox.appendChild(answer);
+      (result.citations || []).forEach(function (citation) {
+        var block = document.createElement("div");
+        block.className = "citation";
+        var title = document.createElement("strong");
+        title.textContent = citation.document_name + ", page " + citation.page;
+        var passage = document.createElement("p");
+        passage.textContent = citation.passage;
+        block.appendChild(title);
+        block.appendChild(passage);
+        answerBox.appendChild(block);
+      });
+    }
+
+    document.getElementById("questionForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      clearError();
+      var question = document.getElementById("questionText").value.trim();
+      var payload = { question: question, document_ids: selectedDocumentIds() };
+      try {
+        var result = await apiRequest("POST", "/questions", {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        showAnswer(result);
+      } catch (error) {
+        showError(error.message);
+      }
+    });
+
+    showAccountStatus();
+    if (savedToken()) {
+      loadDocuments().catch(function (error) {
+        showError(error.message);
+      });
+    }
+  </script>
+</body>
+</html>
