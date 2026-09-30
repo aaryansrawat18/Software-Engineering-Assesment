@@ -7,6 +7,7 @@ from app.db import init_db
 from app.logging import configure_logging
 from app.routers.auth import router as auth_router
 from app.routers.documents import router as documents_router
+from app.routers.questions import router as questions_router
 from app.services.storage import ensure_upload_directory
 
 
@@ -24,6 +25,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="DocuMind", lifespan=lifespan)
     app.include_router(auth_router)
     app.include_router(documents_router)
+    app.include_router(questions_router)
     return app
 
 
